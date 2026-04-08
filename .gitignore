@@ -4,4 +4,4 @@ __pycache__/
 .env
 data/raw/
 mlruns/
-.DS_Store
+.DS_Storechroma_db/
