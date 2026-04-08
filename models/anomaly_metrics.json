@@ -1,0 +1,26 @@
+{
+  "logistic_regression": {
+    "accuracy": 0.8772,
+    "precision": 0.8125,
+    "recall": 0.7647,
+    "f1": 0.7879
+  },
+  "random_forest": {
+    "accuracy": 0.8246,
+    "precision": 0.7333,
+    "recall": 0.6471,
+    "f1": 0.6875
+  },
+  "xgboost": {
+    "accuracy": 0.8421,
+    "precision": 0.75,
+    "recall": 0.7059,
+    "f1": 0.7273
+  },
+  "isolation_forest": {
+    "accuracy": 0.5088,
+    "precision": 0.28,
+    "recall": 0.4118,
+    "f1": 0.3333
+  }
+}
