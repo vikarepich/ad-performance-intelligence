@@ -67,4 +67,4 @@ if __name__ == "__main__":
     print(f"Anomalies found: {df['is_anomaly'].sum()}")
     print(df[["campaign_name", "c_date", "roas", "roas_wow", "is_anomaly"]].head(10))
 
-save_features(df)
+    save_features(df)
