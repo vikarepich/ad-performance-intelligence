@@ -5,3 +5,4 @@ __pycache__/
 data/raw/
 mlruns/
 .DS_Storechroma_db/
+mlruns/
