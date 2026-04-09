@@ -298,9 +298,11 @@ def shapley(journeys_df, max_users=500):
 
                 # Shapley weight: |S|!(n-|S|-1)! / n!
                 s = len(subset)
+
+                from math import factorial
                 weight = (
-                    np.math.factorial(s) * np.math.factorial(n - s - 1)
-                    / np.math.factorial(n)
+                    factorial(s) * factorial(n - s - 1)
+                    / factorial(n)
                 )
 
                 shapley_values[channel] += weight * marginal
