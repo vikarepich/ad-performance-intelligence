@@ -1,0 +1,28 @@
+{
+  "headline": "Last-click attribution misallocates revenue: tiktok_paid is undervalued by +3.6pp, while google_search_brand is overvalued by 5.5pp.",
+  "tracking": {
+    "ga4_data_loss": "24.8%",
+    "enhanced_recovery": "22.3%",
+    "cookie_rejection_rate": "34.5%"
+  },
+  "attribution": {
+    "most_undervalued": {
+      "channel": "tiktok_paid",
+      "last_click_pct": 10.9,
+      "shapley_pct": 14.5,
+      "difference": 3.6
+    },
+    "most_overvalued": {
+      "channel": "google_search_brand",
+      "last_click_pct": 20.7,
+      "shapley_pct": 15.2,
+      "difference": -5.5
+    }
+  },
+  "summary": {
+    "total_users": 2000,
+    "converting_users": 239,
+    "conversion_rate": "11.9%",
+    "total_revenue": 17928.56
+  }
+}
