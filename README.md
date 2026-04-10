@@ -271,3 +271,12 @@ Growth Leader Who Codes · 13+ years in healthtech, fintech, D2C
 
 - [LinkedIn](https://www.linkedin.com/in/vikarepich/)
 - [GitHub](https://github.com/vikarepich)
+
+---
+
+## Documentation
+
+- [Pitch Deck (PDF)](docs/ad_intelligence_pitch.pptx.pdf) — 8-slide project overview
+- [User Manual (PDF)](docs/user_manual.docx.pdf) — full setup and usage guide
+
+---
