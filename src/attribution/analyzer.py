@@ -65,46 +65,81 @@ def compare_models(attribution_df):
 
 def find_misattribution(attribution_df):
     """
-    Find channels where last-click and Shapley disagree the most.
+    Find channels where last-click disagrees with data-driven models
+    (Shapley and Markov).
 
-    This is the money insight: channels that last-click ignores
-    but Shapley says are crucial.
+    The money insight: channels that last-click systematically over- or
+    undervalues compared to data-driven attribution. Both Shapley
+    (cooperative game theory) and Markov (chain removal effect) are
+    independent methodologies — when they agree on the direction of
+    disagreement with last-click, that's a high-confidence signal.
 
-    Returns a DataFrame sorted by absolute difference.
+    Returns a DataFrame with one row per channel, columns for each
+    model's revenue and share, plus two verdicts: one Shapley vs
+    last-click, one Markov vs last-click.
     """
-    last = attribution_df[attribution_df["model"] == "last_click"][
-        ["channel", "attributed_revenue"]
-    ].rename(columns={"attributed_revenue": "last_click_revenue"})
+    def _slice(model_name: str, revenue_col: str) -> pd.DataFrame:
+        return (
+            attribution_df[attribution_df["model"] == model_name]
+            [["channel", "attributed_revenue"]]
+            .rename(columns={"attributed_revenue": revenue_col})
+        )
 
-    shap = attribution_df[attribution_df["model"] == "shapley"][
-        ["channel", "attributed_revenue"]
-    ].rename(columns={"attributed_revenue": "shapley_revenue"})
+    last = _slice("last_click", "last_click_revenue")
+    shap = _slice("shapley",    "shapley_revenue")
+    mark = _slice("markov",     "markov_revenue")
 
-    comparison = last.merge(shap, on="channel", how="outer").fillna(0)
-
-    # Calculate total for percentages
-    total_last = comparison["last_click_revenue"].sum()
-    total_shap = comparison["shapley_revenue"].sum()
-
-    comparison["last_click_pct"] = (
-        comparison["last_click_revenue"] / total_last * 100
-    ).round(1) if total_last > 0 else 0
-
-    comparison["shapley_pct"] = (
-        comparison["shapley_revenue"] / total_shap * 100
-    ).round(1) if total_shap > 0 else 0
-
-    comparison["pct_difference"] = (
-        comparison["shapley_pct"] - comparison["last_click_pct"]
-    ).round(1)
-
-    comparison["verdict"] = comparison["pct_difference"].apply(
-        lambda x: "UNDERVALUED by last-click" if x > 3
-        else ("OVERVALUED by last-click" if x < -3 else "Fairly valued")
+    comparison = (
+        last
+        .merge(shap, on="channel", how="outer")
+        .merge(mark, on="channel", how="outer")
+        .fillna(0)
     )
 
-    return comparison.sort_values("pct_difference", ascending=False)
+    # Calculate share-of-total for each model.
+    for col_revenue, col_pct in [
+        ("last_click_revenue", "last_click_pct"),
+        ("shapley_revenue",    "shapley_pct"),
+        ("markov_revenue",     "markov_pct"),
+    ]:
+        total = comparison[col_revenue].sum()
+        comparison[col_pct] = (
+            (comparison[col_revenue] / total * 100).round(1)
+            if total > 0 else 0
+        )
 
+    # Difference vs last-click for each data-driven model.
+    comparison["shapley_vs_lc_pp"] = (
+        comparison["shapley_pct"] - comparison["last_click_pct"]
+    ).round(1)
+    comparison["markov_vs_lc_pp"] = (
+        comparison["markov_pct"] - comparison["last_click_pct"]
+    ).round(1)
+
+    # Backward-compat: keep the old column name for any downstream consumer
+    # (Streamlit, MCP server, notebooks) that already references it.
+    comparison["pct_difference"] = comparison["shapley_vs_lc_pp"]
+
+    def _verdict(diff_pp: float) -> str:
+        if diff_pp > 3:
+            return "UNDERVALUED by last-click"
+        if diff_pp < -3:
+            return "OVERVALUED by last-click"
+        return "Fairly valued"
+
+    comparison["verdict"]        = comparison["shapley_vs_lc_pp"].apply(_verdict)
+    comparison["verdict_markov"] = comparison["markov_vs_lc_pp"].apply(_verdict)
+
+    # Highlight channels where both data-driven models agree on the
+    # direction of disagreement with last-click — the highest-confidence
+    # signal for a budget reallocation conversation.
+    comparison["both_models_agree"] = (
+        (comparison["shapley_vs_lc_pp"] > 3) & (comparison["markov_vs_lc_pp"] > 3)
+    ) | (
+        (comparison["shapley_vs_lc_pp"] < -3) & (comparison["markov_vs_lc_pp"] < -3)
+    )
+
+    return comparison.sort_values("shapley_vs_lc_pp", ascending=False)
 
 def analyze_tracking_loss(journeys_df):
     """

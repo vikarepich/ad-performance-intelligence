@@ -247,10 +247,10 @@ class TestShapley:
 class TestRunAllModels:
     """Tests for the combined run_all_models function."""
 
-    def test_returns_five_models(self, sample_attribution):
-        """Check that all 5 models are in the results."""
+    def test_returns_six_models(self, sample_attribution):
+        """Check that all 6 models are in the results."""
         models = sample_attribution["model"].unique()
-        expected = {"last_click", "first_click", "linear", "time_decay", "shapley"}
+        expected = {"last_click", "first_click", "linear", "time_decay", "shapley", "markov"}
         assert set(models) == expected, \
             f"Expected models {expected}, got {set(models)}"
 

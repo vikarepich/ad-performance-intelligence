@@ -72,21 +72,25 @@ Each connector includes step-by-step instructions for connecting real accounts.
 ### Phase 2.1: Multi-Touch Attribution
 Solves the attribution problem that GA4 gets wrong:
 
-**5 Attribution Models:**
-| Model | How it works |
-|---|---|
-| Last-click | 100% credit to last touch (GA4 default — misleading) |
-| First-click | 100% credit to first touch |
-| Linear | Equal credit to all touches |
-| Time-decay | More credit to recent touches |
-| Shapley | Mathematically fair distribution (game theory) |
+**6 Attribution Models:**
+| Model | How it works | Cost |
+|---|---|---|
+| Last-click | 100% credit to last touch (GA4 default — misleading) | O(1) |
+| First-click | 100% credit to first touch | O(1) |
+| Linear | Equal credit to all touches | O(N) |
+| Time-decay | More credit to recent touches | O(N) |
+| Shapley | Cooperative game theory — credit by marginal contribution across all coalitions | O(2^N) |
+| Markov chain | Path-aware — credit by removal effect (drop in conversion probability when channel is turned off) | O(N²) |
+
+Shapley and Markov are independent data-driven methods: Shapley is order-agnostic, Markov is path-aware. When they agree directionally, that's a high-confidence signal for budget reallocation.
+
 
 **Cookieless Tracking:**
 - GA4 loses **24.8%** of touchpoints due to cookie rejection + ad blockers
 - Enhanced tracking (UTM + fingerprint + server-side) recovers **22.3%** additional data
 - Result: 97.5% visibility vs GA4's 75.2%
 
-**Key Insight:** Last-click overvalues Google Brand Search by 5.5pp and undervalues TikTok by 3.6pp. Budget decisions based on last-click waste money.
+**Key insight:** Both data-driven models agree that last-click overvalues Google Brand Search (by 3-5pp) and undervalues TikTok and Meta Facebook (by 2-4pp each). Two independent methodologies pointing the same direction = high-confidence signal that budget allocated on last-click is being wasted on bottom-funnel and starved from top-funnel.
 
 ### Testing
 - **143 pytest tests** across all modules
@@ -104,7 +108,7 @@ Solves the attribution problem that GA4 gets wrong:
 | API | FastAPI, uvicorn |
 | Dashboard | Streamlit, Plotly |
 | Integration | MCP (Model Context Protocol) |
-| Attribution | Custom Shapley implementation, cookieless tracking simulation |
+| Attribution | Custom Shapley + Markov chain implementations, cookieless tracking simulation |
 | Testing | pytest (143 tests) |
 | Environment | Python 3.11, venv |
 
@@ -140,7 +144,8 @@ ad-performance-intelligence/
 │   │   └── manager.py                # Multi-source data collection
 │   ├── attribution/
 │   │   ├── journey_simulator.py       # User journey generation
-│   │   ├── models.py                  # 5 attribution models
+│   │   ├── models.py                  # 5 rule-based + Shapley attribution models
+│   │   ├── markov_model.py            # Markov chain attribution (path-aware, removal effect)
 │   │   └── analyzer.py               # Model comparison + insights
 │   ├── api/main.py                    # FastAPI backend (8 endpoints)
 │   └── mcp/server.py                  # MCP server for Claude Desktop
@@ -235,16 +240,24 @@ python src/mcp/server.py
 
 ## Attribution Results
 
-Last-click attribution (GA4 default) vs Shapley (mathematically fair):
+Last-click vs two independent data-driven methods (€17,928 total revenue, 2,000 user journeys):
 
-| Channel | Last-click | Shapley | Verdict |
-|---|---|---|---|
-| TikTok Paid | 10.9% | 14.5% | **Undervalued** by last-click |
-| Meta Facebook | 11.0% | 14.3% | **Undervalued** by last-click |
-| Google Brand Search | 20.7% | 15.2% | **Overvalued** by last-click |
-| Direct | 12.1% | 11.2% | Fairly valued |
+| Channel | Last-click | Markov | Shapley | Verdict |
+|---|---|---|---|---|
+| Google Brand Search | 20.7% | 17.4% | 15.2% | **Overvalued** by last-click (both models agree) |
+| Google Search Nonbrand | 15.0% | 14.6% | 15.8% | Fairly valued |
+| TikTok Paid | 10.9% | 13.9% | 14.5% | **Undervalued** by last-click |
+| Meta Facebook | 11.0% | 13.2% | 14.3% | **Undervalued** by last-click |
+| Direct | 12.1% | 10.8% | 11.2% | Fairly valued |
+| Google Display Retargeting | 9.7% | 10.3% | 9.8% | Fairly valued |
+| Organic Search | 11.2% | 10.0% | 8.4% | Slightly overvalued |
+| Meta Instagram Stories | 9.4% | 9.9% | 10.8% | Fairly valued |
 
-**Bottom line:** If you allocate budget based on last-click, you're overspending on Google Brand and underspending on TikTok and Meta — the channels that actually start the customer journey.
+**Bottom line:** Markov and Shapley independently arrive at the same conclusion — last-click overspends on Google Brand Search and starves the top-of-funnel channels (TikTok, Meta) that actually start the customer journey. On €1M/month spend, the Google Brand overcrediting alone amounts to ~€33K/month misallocated.
+
+**Why two data-driven methods, not one?** They use different math: Shapley evaluates channels through cooperative game theory (marginal contribution across coalitions, O(2^N)). Markov models journeys as a state graph and computes "removal effect" (drop in conversion probability if a channel is turned off, O(N²)). Both are derived from the same journey data; agreement between them is an independent verification, not luck.
+
+All six models conserve total revenue at €17,928.56 — a sanity-check invariant verified by pytest.
 
 ---
 
@@ -255,7 +268,7 @@ Last-click attribution (GA4 default) vs Shapley (mathematically fair):
 - [x] Phase 3: RAG layer (ChromaDB + LLM)
 - [x] Phase 4: Product layer (FastAPI + Streamlit + MCP)
 - [x] Phase 2.0: Multi-platform connectors (Google, Meta, TikTok, GA4)
-- [x] Phase 2.1: Multi-touch attribution (5 models + cookieless tracking)
+- [x] Phase 2.1: Multi-touch attribution (6 models including Shapley + Markov, cookieless tracking)
 - [ ] Phase 3.0: MLflow experiment tracking
 - [ ] Phase 3.1: Docker containerization
 - [ ] Phase 3.2: Real API integrations (live ad accounts)

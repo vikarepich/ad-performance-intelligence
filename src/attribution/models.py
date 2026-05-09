@@ -27,7 +27,7 @@ Channels that appear in many converting journeys get more credit.
 import pandas as pd
 import numpy as np
 from itertools import combinations
-
+from src.attribution.markov_model import markov_attribution
 
 # ============================================================
 # LAST-CLICK ATTRIBUTION
@@ -329,31 +329,32 @@ def shapley(journeys_df, max_users=500):
 
 def run_all_models(journeys_df):
     """
-    Run all 5 attribution models and return combined results.
-
+    Run all 6 attribution models and return combined results.
     Returns:
         DataFrame with all models' attributions stacked
     """
     print("Running attribution models...")
-
     results = []
 
-    print("  1/5 Last-click...")
+    print("  1/6 Last-click...")
     results.append(last_click(journeys_df))
 
-    print("  2/5 First-click...")
+    print("  2/6 First-click...")
     results.append(first_click(journeys_df))
 
-    print("  3/5 Linear...")
+    print("  3/6 Linear...")
     results.append(linear(journeys_df))
 
-    print("  4/5 Time-decay...")
+    print("  4/6 Time-decay...")
     results.append(time_decay(journeys_df))
 
-    print("  5/5 Shapley (this takes a moment)...")
+    print("  5/6 Shapley (this takes a moment)...")
     results.append(shapley(journeys_df))
 
-    combined = pd.concat(results, ignore_index=True)
-    print(f"\nAttribution complete: {len(combined)} rows across 5 models")
+    print("  6/6 Markov chain...")
+    results.append(markov_attribution(journeys_df))
 
+    combined = pd.concat(results, ignore_index=True)
+    print(f"\nAttribution complete: {len(combined)} rows across 6 models")
+    
     return combined
