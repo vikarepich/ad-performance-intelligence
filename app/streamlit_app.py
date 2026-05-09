@@ -82,7 +82,7 @@ st.sidebar.markdown("---")
 
 page = st.sidebar.radio(
     "Navigate",
-    ["Overview", "Campaign Performance", "Anomalies", "Model Metrics", "Feature Importance", "AI Chat"],
+    ["Overview", "Campaign Performance", "Anomalies", "Model Metrics", "Feature Importance", "AI Chat", "Upload Data"],
 )
 
 st.sidebar.markdown("---")
@@ -475,3 +475,108 @@ elif page == "AI Chat":
             if st.button(suggestion, key=suggestion):
                 st.session_state.messages.append({"role": "user", "content": suggestion})
                 st.rerun()
+
+# ============================================================
+# PAGE: UPLOAD DATA
+# ============================================================
+
+elif page == "Upload Data":
+    st.title("📁 Upload Campaign Data")
+    st.markdown("Upload CSV exports from your ad platforms. The system auto-detects the platform and maps columns automatically.")
+
+    from src.connectors.csv_upload import process_uploaded_csv, save_uploaded_data
+
+    # Platform selection
+    platform_option = st.radio(
+        "Platform detection",
+        ["Auto-detect", "Google Ads", "Meta Ads", "TikTok Ads", "GA4"],
+        horizontal=True,
+    )
+
+    platform_map = {
+        "Auto-detect": None,
+        "Google Ads": "google_ads",
+        "Meta Ads": "meta_ads",
+        "TikTok Ads": "tiktok_ads",
+        "GA4": "ga4",
+    }
+
+    # File upload
+    uploaded_file = st.file_uploader(
+        "Upload your CSV export",
+        type=["csv"],
+        help="Export a report from your ad platform and upload the CSV file here.",
+    )
+
+    if uploaded_file is not None:
+        # Process the file
+        with st.spinner("Processing..."):
+            result = process_uploaded_csv(
+                uploaded_file,
+                manual_platform=platform_map[platform_option],
+            )
+
+        # Show detection result
+        if result["platform"] == "unknown":
+            st.error("Could not detect the platform. Please select it manually.")
+            st.markdown(f"**Columns found:** {', '.join(result['original_columns'])}")
+        else:
+            st.success(f"Detected platform: **{result['platform']}**")
+
+            # Show mapping
+            with st.expander("Column mapping details"):
+                for our_col, source_col in result["mapping"].items():
+                    icon = "✅" if "not found" not in source_col else "⚠️"
+                    st.markdown(f"{icon} **{our_col}** ← {source_col}")
+
+            # Show warnings
+            if result["warnings"]:
+                for warning in result["warnings"]:
+                    st.warning(warning)
+
+            # Preview data
+            st.subheader(f"Preview ({result['row_count']} rows)")
+            st.dataframe(result["data"].head(20), use_container_width=True)
+
+            # Summary stats
+            data = result["data"]
+            col1, col2, col3, col4 = st.columns(4)
+            col1.metric("Rows", result["row_count"])
+            col2.metric("Campaigns", data["campaign_name"].nunique() if "campaign_name" in data.columns else 0)
+            col3.metric("Total Spend", f"${data['mark_spent'].sum():,.2f}" if "mark_spent" in data.columns else "$0")
+            col4.metric("Total Revenue", f"${data['revenue'].sum():,.2f}" if "revenue" in data.columns else "$0")
+
+            # Save button
+            st.markdown("---")
+            col_save, col_mode = st.columns(2)
+            with col_mode:
+                append_mode = st.checkbox("Append to existing data", value=True)
+            with col_save:
+                if st.button("💾 Save to Pipeline", type="primary"):
+                    save_uploaded_data(data, append=append_mode)
+                    st.success(f"Saved {result['row_count']} rows! Run the pipeline next:")
+                    st.code("python -m src.etl.pipeline", language="bash")
+
+    # Help section
+    with st.expander("How to export CSV from each platform"):
+        st.markdown("""
+**Google Ads:**
+1. Go to Campaigns → Reports
+2. Select columns: Campaign, Day, Impressions, Clicks, Cost, Conversions, Conv. value
+3. Download as CSV
+
+**Meta Ads (Facebook):**
+1. Go to Ads Manager → Columns: Performance
+2. Set date range and breakdown by Day
+3. Export → Download as CSV
+
+**TikTok Ads:**
+1. Go to TikTok Ads Manager → Campaign
+2. Click Custom Columns, select metrics
+3. Export → CSV
+
+**GA4 (Google Analytics):**
+1. Go to Reports → Acquisition → Traffic Acquisition
+2. Add secondary dimension: Session campaign
+3. Export → Download CSV
+        """)
