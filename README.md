@@ -1,3 +1,19 @@
+## Run with Docker (recommended — one command)
+
+```bash
+git clone https://github.com/vikarepich/ad-performance-intelligence.git
+cd ad-performance-intelligence
+echo "HF_TOKEN=hf_your_token_here" > .env  # free at huggingface.co/settings/tokens
+docker-compose up -d
+```
+
+That's it. Two services come up with healthchecks:
+
+- **FastAPI:** http://localhost:8000/docs (8 endpoints, OpenAPI docs)
+- **Streamlit dashboard:** http://localhost:8501 (7 pages: Overview, Campaigns, Anomalies, Model Metrics, Feature Importance, AI Chat, Upload Data)
+
+To stop: `docker-compose down`. To rebuild after code changes: `docker-compose build`.
+
 ---
 
 ## Run it locally
