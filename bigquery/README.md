@@ -71,6 +71,14 @@ The Sandbox tier (free, no billing required) is enough — none of these queries
 
 ---
 
+## A note on VS Code red marks
+
+If you have Microsoft SQL Server extensions (`ms-mssql.*`) installed in VS Code, you may see red error marks in these `.sql` files. The MSSQL parser doesn't recognize BigQuery-specific syntax (`UNNEST`, `_TABLE_SUFFIX`, backticks for table names, `STRUCT.field` access, `APPROX_QUANTILES`).
+
+The queries are syntactically valid BigQuery SQL and execute correctly in the BigQuery Console. If the warnings annoy you, install [BigQuery Runner](https://marketplace.visualstudio.com/items?itemName=minodisk.bigquery-runner) — it provides BigQuery-aware syntax highlighting.
+
+---
+
 ## Related modules in this project
 
 - **`src/attribution/`** — Python implementations of Shapley and Markov chain attribution models (more sophisticated than the SQL versions here)
